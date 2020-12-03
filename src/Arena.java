@@ -1,76 +1,72 @@
-import java.util.ArrayList;
 import java.util.concurrent.Semaphore;
 
 public class Arena {
 
     private static final int Max_Jug = 10;
-    private ArrayList<Jugador> participantes = new ArrayList<Jugador>();
+    private int pptes=0, ganacont=0;
     private final Semaphore entrar = new Semaphore(Max_Jug, true);
-    private boolean eliminados;
+    private Jugador ganador = new Jugador();
+    private boolean tanda1=true;
 
 
-    public synchronized void addParticipante(Jugador j) throws InterruptedException {
+    public void setGanador(Jugador ganador) {
+        this.ganador=ganador;
+    }
+
+    public String getGanador() {
+        return ganador.getName()+" con "+ganador.puntos+" puntos";
+    }
+
+    public int getGanacont() {
+        return ganacont;
+    }
+
+    public void addParticipante(Jugador j) throws InterruptedException {
         j.arena.entrar.acquire();
-        participantes.add(j);
 
-        if(participantes.size()==10){
-            notifyAll();
-            if(!eliminados) {
-                long rapido = 0;
-                int pos = 0;
-                rapido = participantes.get(pos).dormir;
-                for (int k = 1; k < participantes.size(); k++) {
-                    if (participantes.get(k).dormir < rapido) {
-                        rapido = participantes.get(k).dormir;
-                        pos = k;
-                    }
+        if(tanda1){
+            System.out.println(j.getName() + " está dentro y va a dormir");
+            j.sleep(j.dormir);
+            pptes++;
+
+            if(pptes!=10 && pptes!=9 && pptes!=8 && pptes!=7 && pptes!=6) {
+                if (pptes == 1) {
+                    System.out.println(j.getName()+ " ha sido el primero, bonus");
+                    j.bonus=true;
                 }
-                participantes.get(pos).setPuntos(participantes.get(pos).puntos + 20);
-                System.out.println(this.participantes.get(pos).getName() + " ha sido el más rápido así que le sumamos 20 puntos: " + participantes.get(pos).puntos);
-                eliminarLentos();
-                eliminados=true;
+                System.out.println(j.getName()+" pelea");
+                pelear();
             }else{
-                Jugador ganador = ganador();
-                System.out.println("El ganador es: "+ganador.getName()+" con una puntuación de: "+ganador.puntos);
+                System.out.println("Eliminamos a "+j.getName()+" por lento");
+                j.arena.entrar.release();
+                j.eliminado=true;
+                tanda1=false;
             }
         }else{
-            wait();
+                System.out.println(j.getName()+" está dentro y pelea");
+                pelear();
+        }
+
+
+    }
+
+    public synchronized void pelear(){
+        try {
+            if (pptes<10)
+                wait();
+            else
+                notifyAll();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 
-    private Jugador ganador() {
-        Jugador ganador = new Jugador();
-        for(Jugador i : participantes){
-            if(i.puntos>ganador.puntos)
-                ganador=i;
-        }
-        return ganador;
-    }
-
-    private void eliminarLentos() {
-        ArrayList<Jugador> eliminados = new ArrayList<Jugador>();
-        long dormilon=0;
-        int pos=0;
-        for(int i=0; i<5; i++){
-            dormilon=participantes.get(0).dormir;
-            for(int j=1; j<participantes.size(); j++){
-                if(participantes.get(j).dormir>dormilon){
-                    dormilon=participantes.get(j).dormir;
-                    pos=j;
-                }
-            }
-            eliminados.add(participantes.get(pos));
-            participantes.remove(pos);
-        }
-        for(int i=0; i<5; i++){
-            System.out.println("Eliminamos a: "+eliminados.get(i).getName());
-            eliminados.get(i).arena.entrar.release();
-        }
-
-        for(int i=0; i<participantes.size(); i++){
-            System.out.println(participantes.get(i).getName()+" tiene estos puntos: "+participantes.get(i).puntos);
+    public Jugador ganador(Jugador j){
+        ganacont++;
+        if(ganador.puntos<j.puntos){
+            return j;
+        }else{
+            return ganador;
         }
     }
-
-
 }

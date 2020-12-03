@@ -6,6 +6,5 @@ public class Main {
             j.setName("jugador "+i);
             j.start();
         }
-
     }
 }
